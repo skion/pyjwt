@@ -12,6 +12,10 @@ using any of those algorithms you'll need to install it as well.
 
     sudo easy_install PyCrypto
 
+The Ed25519 algorithm depends on PyNaCl.
+
+    sudo easy_install PyNaCl
+
 Usage
 -----
 
@@ -43,6 +47,7 @@ currently supports:
 * RS256 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-256 hash algorithm
 * RS384 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-384 hash algorithm
 * RS512 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-512 hash algorithm
+* Ed25519 - NaCl's signature algorithm using [Ed25519](http://ed25519.cr.yp.to/index.html)
 
 Change the algorithm with by setting it in encode:
 
@@ -51,6 +56,10 @@ Change the algorithm with by setting it in encode:
 When using the RSASSA-PKCS1-v1_5 algorithms, the `key` argument in both
 `jwt.encode()` and `jwt.decode()` (`"secret"` in the examples) is expected to
 be an RSA private key as imported with `Crypto.PublicKey.RSA.importKey()`.
+
+When using the Ed25519 algorithm, the `key` argument is expected to be a 32-byte
+private signing key for `jwt.encode()` and a 32-byte public verification key for 
+`jwt.decode()`. The signature will be a 64-byte string in this case.
 
 Tests
 -----
