@@ -413,6 +413,32 @@ class TestJWT(unittest.TestCase):
         except ImportError:
             pass
 
+    def test_encode_decode_with_ed25519(self):
+        try:
+            import nacl.signing
+
+            key = nacl.signing.SigningKey.generate()
+
+            # object key
+            jwt_message = jwt.encode(self.payload, key,
+                                     algorithm='Ed25519')
+
+            assert jwt.decode(jwt_message, key.verify_key)
+
+            load_output = jwt.load(jwt_message)
+            jwt.verify_signature(key=key.verify_key, *load_output)
+
+            # string-formatted key
+            jwt_message = jwt.encode(self.payload, bytes(key),
+                                     algorithm='Ed25519')
+
+            assert jwt.decode(jwt_message, bytes(key.verify_key))
+
+            load_output = jwt.load(jwt_message)
+            jwt.verify_signature(key=bytes(key.verify_key), *load_output)
+        except ImportError:
+            pass
+
     def test_crypto_related_signing_methods(self):
         try:
             import Crypto
@@ -423,6 +449,12 @@ class TestJWT(unittest.TestCase):
             self.assertFalse('RS256' in jwt.signing_methods)
             self.assertFalse('RS384' in jwt.signing_methods)
             self.assertFalse('RS512' in jwt.signing_methods)
+
+        try:
+            import nacl.signing
+            self.assertTrue('Ed25519' in jwt.signing_methods)
+        except ImportError:
+            self.assertFalse('Ed25519' in jwt.signing_methods)
 
     def test_crypto_related_verify_methods(self):
         try:
@@ -435,6 +467,12 @@ class TestJWT(unittest.TestCase):
             self.assertFalse('RS384' in jwt.verify_methods)
             self.assertFalse('RS512' in jwt.verify_methods)
 
+        try:
+            import nacl.signing
+            self.assertTrue('Ed25519' in jwt.verify_methods)
+        except ImportError:
+            self.assertFalse('Ed25519' in jwt.verify_methods)
+
     def test_crypto_related_key_preparation_methods(self):
         try:
             import Crypto
@@ -446,6 +484,11 @@ class TestJWT(unittest.TestCase):
             self.assertFalse('RS384' in jwt.prepare_key_methods)
             self.assertFalse('RS512' in jwt.prepare_key_methods)
 
+        try:
+            import nacl.signing
+            self.assertTrue('Ed25519' in jwt.prepare_key_methods)
+        except ImportError:
+            self.assertFalse('Ed25519' in jwt.prepare_key_methods)
 
 if __name__ == '__main__':
     unittest.main()

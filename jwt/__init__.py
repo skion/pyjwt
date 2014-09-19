@@ -120,9 +120,9 @@ try:
     })
 
     def prepare_NaCl_key(key, sign=True):
-        if isinstance(key, basestring):
-            if isinstance(key, unicode):
-                key = key.encode('utf-8')
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(key, bytes):
             if sign:
                 key = nacl.signing.SigningKey(key)
             else:
@@ -260,7 +260,7 @@ def load(jwt):
 
 
 def verify_signature(payload, signing_input, header, signature, key='',
-            verify_expiration=True, leeway=0):
+                     verify_expiration=True, leeway=0):
     try:
         algorithm = header['alg']
         key = prepare_key_methods[algorithm](key, sign=False)
