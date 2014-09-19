@@ -47,7 +47,7 @@ verify_methods = {
     'HS512': lambda msg, key: hmac.new(key, msg, hashlib.sha512).digest()
 }
 
-def prepare_HS_key(key):
+def prepare_HS_key(key, sign=None):
     if isinstance(key, basestring):
         if isinstance(key, unicode):
             key = key.encode('utf-8')
@@ -80,7 +80,7 @@ try:
         'RS512': lambda msg, key, sig: PKCS1_v1_5.new(key).verify(SHA512.new(msg), sig)
     })
 
-    def prepare_RS_key(key):
+    def prepare_RS_key(key, sign=None):
         if isinstance(key, basestring):
             if isinstance(key, unicode):
                 key = key.encode('utf-8')
@@ -95,6 +95,48 @@ try:
         'RS256': prepare_RS_key,
         'RS384': prepare_RS_key,
         'RS512': prepare_RS_key
+    })
+
+except ImportError:
+    pass
+
+
+try:
+    import nacl.signing
+
+    signing_methods.update({
+        'Ed25519': lambda msg, key: key.sign(msg).signature,
+    })
+
+    def verify_ed25519(msg, key, sig):
+        try:
+            return key.verify(msg, sig)
+        except nacl.exceptions.CryptoError:
+            pass
+        return False
+
+    verify_methods.update({
+        'Ed25519': verify_ed25519,
+    })
+
+    def prepare_NaCl_key(key, sign=True):
+        if isinstance(key, basestring):
+            if isinstance(key, unicode):
+                key = key.encode('utf-8')
+            if sign:
+                key = nacl.signing.SigningKey(key)
+            else:
+                key = nacl.signing.VerifyKey(key)
+        elif sign and isinstance(key, nacl.signing.SigningKey):
+            pass
+        elif not sign and isinstance(key, nacl.signing.VerifyKey):
+            pass
+        else:
+            raise TypeError("Expecting a NaCl compatible key.")
+        return key
+
+    prepare_key_methods.update({
+        'Ed25519': prepare_NaCl_key,
     })
 
 except ImportError:
@@ -155,7 +197,7 @@ def encode(payload, key, algorithm='HS256', headers=None):
     segments.append(base64url_encode(json_header))
 
     # Payload
-    for time_claim in ['exp', 'iat', 'nbf']:    # convert datetime to a intDate value in known time-format claims
+    for time_claim in ['exp', 'iat', 'nbf']:  # convert datetime to a intDate value in known time-format claims
         if isinstance(payload.get(time_claim), datetime):
             payload[time_claim] = timegm(payload[time_claim].utctimetuple())
     json_payload = json.dumps(payload, separators=(',', ':')).encode('utf-8')
@@ -164,7 +206,7 @@ def encode(payload, key, algorithm='HS256', headers=None):
     # Segments
     signing_input = b'.'.join(segments)
     try:
-        key = prepare_key_methods[algorithm](key)
+        key = prepare_key_methods[algorithm](key, sign=True)
         signature = signing_methods[algorithm](signing_input, key)
     except KeyError:
         raise NotImplementedError("Algorithm not supported")
@@ -177,7 +219,7 @@ def decode(jwt, key='', verify=True, verify_expiration=True, leeway=0):
 
     if verify:
         verify_signature(payload, signing_input, header, signature, key,
-                verify_expiration, leeway)
+                         verify_expiration, leeway)
 
     return payload
 
@@ -220,8 +262,8 @@ def load(jwt):
 def verify_signature(payload, signing_input, header, signature, key='',
             verify_expiration=True, leeway=0):
     try:
-        algorithm = header['alg'].upper()
-        key = prepare_key_methods[algorithm](key)
+        algorithm = header['alg']
+        key = prepare_key_methods[algorithm](key, sign=False)
         if algorithm.startswith('HS'):
             expected = verify_methods[algorithm](signing_input, key)
             if not constant_time_compare(signature, expected):
