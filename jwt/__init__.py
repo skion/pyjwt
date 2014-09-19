@@ -140,7 +140,39 @@ try:
     })
 
 except ImportError:
-    pass
+    from . import ed25519
+
+    def sign_ed25519_pure(msg, key):
+        pk = ed25519.publickey(key)
+        return ed25519.signature(msg, key, pk)
+
+    signing_methods.update({
+        'Ed25519': sign_ed25519_pure,
+    })
+
+    def verify_ed25519_pure(msg, key, sig):
+        try:
+            ed25519.checkvalid(sig, msg, key)
+        except:
+            return False
+        return True
+
+    verify_methods.update({
+        'Ed25519': verify_ed25519_pure,
+    })
+
+    def prepare_ed25519_key(key, sign=True):
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(key, bytes):
+            pass
+        else:
+            raise TypeError("Expecting an Ed25519 compatible key.")
+        return key
+
+    prepare_key_methods.update({
+        'Ed25519': prepare_ed25519_key,
+    })
 
 
 def constant_time_compare(val1, val2):
