@@ -1,5 +1,5 @@
-Pyjwt lead developper
----------------------
+Pyjwt lead developer
+--------------------
 
  - progrium <progrium@gmail.com>
 
@@ -9,4 +9,8 @@ Patches and Suggestions
  - FELD Boris <boris.feld@novapost.fr> <lothiraldan@gmail.com>
 
  - Åsmund Ødegård <asmund@xal.no> <ao@mcash.no> 
-   Adding support for RSA-SHA256 privat/public signature.
+   Adding support for RSA-SHA256 private/public signature.
+
+ - Pieter Ennes <pieterennes@gmail.com>
+   Adding support for Ed25519 signatures.
+
