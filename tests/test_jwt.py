@@ -18,7 +18,7 @@ def utc_timestamp():
 class TestJWT(unittest.TestCase):
 
     def setUp(self):
-        self.payload = {"iss": "jeff", "exp": utc_timestamp() + 1,
+        self.payload = {"iss": "jeff", "exp": utc_timestamp() + 15,
                         "claim": "insanity"}
 
     def test_encode_decode(self):
@@ -414,6 +414,18 @@ class TestJWT(unittest.TestCase):
             pass
 
     def test_encode_decode_with_ed25519(self):
+        sk = 'pxPwSA00oEV0/vglKr5KAlEhFlmgb0ZOYmhLlDImYSc='.decode("base64")
+        pk = 'dR1cZzYf+uC6r5L1VOmnKj22AvDCTQR2FYJ6qpGip6U='.decode("base64")
+
+        # string-formatted key
+        jwt_message = jwt.encode(self.payload, sk,
+                                 algorithm='Ed25519')
+
+        assert jwt.decode(jwt_message, pk)
+
+        load_output = jwt.load(jwt_message)
+        jwt.verify_signature(key=pk, *load_output)
+
         try:
             import nacl.signing
 
@@ -427,15 +439,6 @@ class TestJWT(unittest.TestCase):
 
             load_output = jwt.load(jwt_message)
             jwt.verify_signature(key=key.verify_key, *load_output)
-
-            # string-formatted key
-            jwt_message = jwt.encode(self.payload, bytes(key),
-                                     algorithm='Ed25519')
-
-            assert jwt.decode(jwt_message, bytes(key.verify_key))
-
-            load_output = jwt.load(jwt_message)
-            jwt.verify_signature(key=bytes(key.verify_key), *load_output)
         except ImportError:
             pass
 
