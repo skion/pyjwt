@@ -425,10 +425,12 @@ class TestJWT(unittest.TestCase):
         pk = 'dR1cZzYf+uC6r5L1VOmnKj22AvDCTQR2FYJ6qpGip6U='.decode("base64")
 
         # string-formatted key
-        jwt_message = jwt.encode(self.payload, sk,
-                                 algorithm='Ed25519')
+        jwt_message = jwt.encode(self.payload, sk, algorithm='Ed25519',
+                                 headers={"kid": jwt.base64url_encode(pk)})
 
         assert jwt.decode(jwt_message, pk)
+        # this should use kid from protected header
+        assert jwt.decode(jwt_message, None)
 
         load_output = jwt.load(jwt_message)
         jwt.verify_signature(key=pk, *load_output)
@@ -438,11 +440,16 @@ class TestJWT(unittest.TestCase):
 
             key = nacl.signing.SigningKey.generate()
 
+            sk = bytes(key)
+            pk = bytes(key.verify_key)
+
             # object key
-            jwt_message = jwt.encode(self.payload, key,
-                                     algorithm='Ed25519')
+            jwt_message = jwt.encode(self.payload, key, algorithm='Ed25519',
+                                     headers={"kid": jwt.base64url_encode(pk)})
 
             assert jwt.decode(jwt_message, key.verify_key)
+            # this should use kid from protected header
+            assert jwt.decode(jwt_message, None)
 
             load_output = jwt.load(jwt_message)
             jwt.verify_signature(key=key.verify_key, *load_output)

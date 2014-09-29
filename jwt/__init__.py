@@ -128,9 +128,12 @@ try:
                 key = nacl.signing.SigningKey(key)
             else:
                 key = nacl.signing.VerifyKey(key)
-        elif sign and isinstance(key, nacl.signing.SigningKey):
-            pass
-        elif not sign and isinstance(key, nacl.signing.VerifyKey):
+        elif isinstance(key, nacl.signing.SigningKey):
+            if sign:
+                pass
+            else:
+                key = key.verify_key
+        elif isinstance(key, nacl.signing.VerifyKey) and not sign:
             pass
         else:
             raise TypeError("Expecting a NaCl compatible key.")
@@ -224,6 +227,13 @@ def encode(payload, key, algorithm='HS256', headers=None):
 
     # Header
     header = {"typ": "JWT", "alg": algorithm}
+    if algorithm == "Ed25519":
+        try:
+            # a verification key should be in header
+            kid = base64url_decode(headers["kid"])
+            prepare_key_methods[algorithm](kid, sign=False)
+        except (TypeError, KeyError):
+            raise ValueError("Expecting verification key in protected header")
     if headers:
         header.update(headers)
     json_header = json.dumps(header, separators=(',', ':')).encode('utf-8')
@@ -316,6 +326,14 @@ def verify_signature(payload, signing_input, header, signature, key='',
                      verify_expiration=True, leeway=0):
     try:
         algorithm = header['alg']
+        # get verification key from header if not provided in call
+        if algorithm == "Ed25519" and not key:
+            try:
+                key = base64url_decode(header["kid"].encode("ascii"))
+            except KeyError:
+                raise DecodeError("Verification key not found in header")
+            except TypeError:
+                raise DecodeError("Invalid verification key in header")
         key = prepare_key_methods[algorithm](key, sign=False)
         if algorithm.startswith('HS'):
             expected = verify_methods[algorithm](signing_input, key)
