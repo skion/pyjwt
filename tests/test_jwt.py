@@ -132,6 +132,13 @@ class TestJWT(unittest.TestCase):
         for key, value in headers.items():
             self.assertEqual(header[key], value)
 
+    def test_custom_headers_decode(self):
+        right_secret = 'foo'
+        headers = {'foo': 'bar', 'kid': 'test'}
+        jwt_message = jwt.encode(self.payload, right_secret, headers=headers)
+        decoded_headers = jwt.decode_header(jwt_message, right_secret)
+        self.assertDictContainsSubset(headers, decoded_headers)
+
     def test_invalid_crypto_alg(self):
         self.assertRaises(NotImplementedError, jwt.encode, self.payload,
                           "secret", "HS1024")

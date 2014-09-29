@@ -19,7 +19,8 @@ try:
 except ImportError:
     import simplejson as json
 
-__all__ = ['encode', 'decode', 'DecodeError']
+__all__ = ['encode', 'decode', 'DecodeError',
+           'decode_segments', 'decode_header', 'decode_payload']
 
 
 if sys.version_info >= (3, 0, 0):
@@ -246,14 +247,34 @@ def encode(payload, key, algorithm='HS256', headers=None):
     return b'.'.join(segments)
 
 
-def decode(jwt, key='', verify=True, verify_expiration=True, leeway=0):
+def decode_segments(jwt, key='', verify=True, verify_expiration=True,
+                    leeway=0):
+    """
+    Decode, (verify and) return both header and payload segments.
+    """
     payload, signing_input, header, signature = load(jwt)
 
     if verify:
         verify_signature(payload, signing_input, header, signature, key,
                          verify_expiration, leeway)
 
-    return payload
+    return (header, payload)
+
+
+def decode_header(jwt, key='', verify=True, verify_expiration=True, leeway=0):
+    """
+    Decode, (verify and) return header segment.
+    """
+    return decode_segments(jwt, key, verify, verify_expiration, leeway)[0]
+
+
+def decode_payload(jwt, key='', verify=True, verify_expiration=True, leeway=0):
+    """
+    Decode, (verify and) return header segment.
+    """
+    return decode_segments(jwt, key, verify, verify_expiration, leeway)[1]
+
+decode = decode_payload
 
 
 def load(jwt):
