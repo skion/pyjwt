@@ -230,7 +230,10 @@ def encode(payload, key, algorithm='HS256', headers=None):
     if algorithm == "Ed25519":
         try:
             # a verification key should be in header
-            kid = base64url_decode(headers["kid"])
+            kid = headers["kid"]
+            if isinstance(kid, unicode):
+                kid = kid.encode("utf-8")
+            kid = base64url_decode(kid)
             prepare_key_methods[algorithm](kid, sign=False)
         except (TypeError, KeyError):
             raise ValueError("Expecting verification key in protected header")
