@@ -25,6 +25,24 @@ def H(m):
 
 
 def expmod(b, e, m):
+    t = 1
+    r = 0         # e in reversed bit order here, from highest 1 bit
+    c = 0         # position of highest 1 bit here
+    while e:
+        r <<= 1
+        r |= e & 1
+        e >>= 1
+        c += 1
+    while c > 0:
+        t = (t * t) % m
+        if r & 1:
+            t = (t * b) % m
+        r >>= 1
+        c -= 1
+    return t
+
+
+def expmod_orig(b, e, m):
     if e == 0:
         return 1
     t = expmod(b, e // 2, m) ** 2 % m
