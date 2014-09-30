@@ -6,6 +6,7 @@ import time
 import unittest
 
 import jwt
+import codecs
 
 if sys.version_info >= (3, 0, 0):
     unicode = str
@@ -421,12 +422,16 @@ class TestJWT(unittest.TestCase):
             pass
 
     def test_encode_decode_with_ed25519(self):
-        sk = 'pxPwSA00oEV0/vglKr5KAlEhFlmgb0ZOYmhLlDImYSc='.decode("base64")
-        pk = 'dR1cZzYf+uC6r5L1VOmnKj22AvDCTQR2FYJ6qpGip6U='.decode("base64")
+        sk = codecs.decode(b"pxPwSA00oEV0/vglKr5KAlEhFlmgb0ZOYmhLlDImYSc=",
+                           "base64")
+        pk = codecs.decode(b"dR1cZzYf+uC6r5L1VOmnKj22AvDCTQR2FYJ6qpGip6U=",
+                           "base64")
+
+        b64pk = jwt.base64url_encode(pk).decode("utf8")
 
         # string-formatted key
         jwt_message = jwt.encode(self.payload, sk, algorithm='Ed25519',
-                                 headers={"kid": jwt.base64url_encode(pk)})
+                                 headers={"kid": b64pk})
 
         assert jwt.decode(jwt_message, pk)
         # this should use kid from protected header
@@ -440,12 +445,11 @@ class TestJWT(unittest.TestCase):
 
             key = nacl.signing.SigningKey.generate()
 
-            sk = bytes(key)
-            pk = bytes(key.verify_key)
+            b64pk = jwt.base64url_encode(bytes(key.verify_key)).decode("utf8")
 
             # object key
             jwt_message = jwt.encode(self.payload, key, algorithm='Ed25519',
-                                     headers={"kid": jwt.base64url_encode(pk)})
+                                     headers={"kid": b64pk})
 
             assert jwt.decode(jwt_message, key.verify_key)
             # this should use kid from protected header
