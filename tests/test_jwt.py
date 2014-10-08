@@ -19,7 +19,7 @@ def utc_timestamp():
 class TestJWT(unittest.TestCase):
 
     def setUp(self):
-        self.payload = {"iss": "jeff", "exp": utc_timestamp() + 15,
+        self.payload = {"iss": "jeff", "exp": utc_timestamp() + 30,
                         "claim": "insanity"}
 
     def test_encode_decode(self):
@@ -429,7 +429,17 @@ class TestJWT(unittest.TestCase):
 
         b64pk = jwt.base64url_encode(pk).decode("utf8")
 
-        # string-formatted key
+        # string-formatted key, implicit kid derivation
+        jwt_message = jwt.encode(self.payload, sk, algorithm='Ed25519')
+
+        assert jwt.decode(jwt_message, pk)
+        # this should use kid from protected header
+        assert jwt.decode(jwt_message, None)
+
+        load_output = jwt.load(jwt_message)
+        jwt.verify_signature(key=pk, *load_output)
+
+        # string-formatted key, explicit kid in header
         jwt_message = jwt.encode(self.payload, sk, algorithm='Ed25519',
                                  headers={"kid": b64pk})
 
@@ -447,7 +457,17 @@ class TestJWT(unittest.TestCase):
 
             b64pk = jwt.base64url_encode(bytes(key.verify_key)).decode("utf8")
 
-            # object key
+            # object key, implicit kid derivation
+            jwt_message = jwt.encode(self.payload, key, algorithm='Ed25519')
+
+            assert jwt.decode(jwt_message, key.verify_key)
+            # this should use kid from protected header
+            assert jwt.decode(jwt_message, None)
+
+            load_output = jwt.load(jwt_message)
+            jwt.verify_signature(key=key.verify_key, *load_output)
+
+            # object key, explicit kid in header
             jwt_message = jwt.encode(self.payload, key, algorithm='Ed25519',
                                      headers={"kid": b64pk})
 

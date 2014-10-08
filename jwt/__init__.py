@@ -48,6 +48,7 @@ verify_methods = {
     'HS512': lambda msg, key: hmac.new(key, msg, hashlib.sha512).digest()
 }
 
+
 def prepare_HS_key(key, sign=None):
     if isinstance(key, basestring):
         if isinstance(key, unicode):
@@ -120,7 +121,7 @@ try:
         'Ed25519': verify_ed25519,
     })
 
-    def prepare_NaCl_key(key, sign=True):
+    def prepare_ed25519_key(key, sign=True):
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(key, bytes):
@@ -140,21 +141,21 @@ try:
         return key
 
     prepare_key_methods.update({
-        'Ed25519': prepare_NaCl_key,
+        'Ed25519': prepare_ed25519_key,
     })
 
 except ImportError:
     from . import ed25519
 
-    def sign_ed25519_pure(msg, key):
+    def sign_ed25519pure(msg, key):
         pk = ed25519.publickey(key)
         return ed25519.signature(msg, key, pk)
 
     signing_methods.update({
-        'Ed25519': sign_ed25519_pure,
+        'Ed25519': sign_ed25519pure,
     })
 
-    def verify_ed25519_pure(msg, key, sig):
+    def verify_ed25519pure(msg, key, sig):
         try:
             ed25519.checkvalid(sig, msg, key)
         except:
@@ -162,20 +163,28 @@ except ImportError:
         return True
 
     verify_methods.update({
-        'Ed25519': verify_ed25519_pure,
+        'Ed25519': verify_ed25519pure,
     })
 
-    def prepare_ed25519_key(key, sign=True):
+    def prepare_ed25519pure_key(key, sign=True):
+
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(key, bytes):
             pass
         else:
             raise TypeError("Expecting an Ed25519 compatible key.")
-        return key
+
+        # mimic nacl's SigningKey
+        class Ed25519Key(bytes):
+            @property
+            def verify_key(self):
+                return ed25519.publickey(self)
+
+        return Ed25519Key(key) if sign else key
 
     prepare_key_methods.update({
-        'Ed25519': prepare_ed25519_key,
+        'Ed25519': prepare_ed25519pure_key,
     })
 
 
@@ -228,15 +237,23 @@ def encode(payload, key, algorithm='HS256', headers=None):
     # Header
     header = {"typ": "JWT", "alg": algorithm}
     if algorithm == "Ed25519":
-        try:
-            # a verification key should be in header
-            kid = headers["kid"]
-            if isinstance(kid, unicode):
-                kid = kid.encode("utf-8")
-            kid = base64url_decode(kid)
-            prepare_key_methods[algorithm](kid, sign=False)
-        except (TypeError, KeyError):
-            raise ValueError("Expecting verification key in protected header")
+        # make sure verification key is in the header
+        if headers is None:
+            headers = {}
+        if "kid" in headers:
+            # check if verification key in header looks valid
+            try:
+                kid = headers["kid"]
+                if isinstance(kid, unicode):
+                    kid = kid.encode("utf-8")
+                kid = base64url_decode(kid)
+                prepare_key_methods[algorithm](kid, sign=False)
+            except (TypeError, KeyError):
+                raise ValueError("Expecting verification key in protected header")
+        else:
+            # derive verification key from secret key
+            kid = prepare_key_methods[algorithm](key, sign=True)
+            headers["kid"] = base64url_encode(bytes(kid.verify_key))
     if headers:
         header.update(headers)
     json_header = json.dumps(header, separators=(',', ':')).encode('utf-8')
