@@ -50,11 +50,10 @@ verify_methods = {
 
 
 def prepare_HS_key(key, sign=None):
-    if isinstance(key, basestring):
-        if isinstance(key, unicode):
-            key = key.encode('utf-8')
-    else:
-        raise TypeError("Expecting a string-formatted key.")
+    if not isinstance(key, basestring) and not isinstance(key, bytes):
+        raise TypeError("Expecting a string- or bytes-formatted key.")
+    if isinstance(key, unicode):
+        key = key.encode('utf-8')
     return key
 
 prepare_key_methods = {
