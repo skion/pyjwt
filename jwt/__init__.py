@@ -124,6 +124,8 @@ try:
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(key, bytes):
+            if len(key) == 43:
+                key = base64url_decode(key)
             if sign:
                 key = nacl.signing.SigningKey(key)
             else:
@@ -166,11 +168,11 @@ except ImportError:
     })
 
     def prepare_ed25519pure_key(key, sign=True):
-
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(key, bytes):
-            pass
+            if len(key) == 43:
+                key = base64url_decode(key)
         else:
             raise TypeError("Expecting an Ed25519 compatible key.")
 
@@ -245,7 +247,6 @@ def encode(payload, key, algorithm='HS256', headers=None):
                 kid = headers["kid"]
                 if isinstance(kid, unicode):
                     kid = kid.encode("utf-8")
-                kid = base64url_decode(kid)
                 prepare_key_methods[algorithm](kid, sign=False)
             except (TypeError, KeyError):
                 raise ValueError("Expecting verification key in protected header")
@@ -348,7 +349,7 @@ def verify_signature(payload, signing_input, header, signature, key='',
         # get verification key from header if not provided in call
         if algorithm == "Ed25519" and not key:
             try:
-                key = base64url_decode(header["kid"].encode("ascii"))
+                key = header["kid"].encode("ascii")
             except KeyError:
                 raise DecodeError("Verification key not found in header")
             except TypeError:
