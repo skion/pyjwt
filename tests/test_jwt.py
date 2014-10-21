@@ -393,7 +393,7 @@ class TestJWT(unittest.TestCase):
         jwt_message = jwt.encode(self.payload, key=None, algorithm=None)
 
         self.assertRaises(
-            NotImplementedError,
+            jwt.DecodeError,
             lambda: jwt.decode(jwt_message))
 
         jwt.decode(jwt_message, verify=False)
