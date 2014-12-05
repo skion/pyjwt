@@ -57,8 +57,13 @@ def prepare_HS_key(key, sign=None):
         key = key.encode('utf-8')
     return key
 
+
+def prepare_none_key(key, sign=None):
+    return None
+
+
 prepare_key_methods = {
-    'none': lambda key: None,
+    'none': prepare_none_key,
     'HS256': prepare_HS_key,
     'HS384': prepare_HS_key,
     'HS512': prepare_HS_key
